@@ -30,6 +30,7 @@ html,body{overflow-x:clip}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--serif);font-size:var(--body);font-weight:400;line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 img{display:block;max-width:100%;height:auto}
+[hidden]{display:none!important}
 h1,h2,h3{margin:0;font-family:var(--disp);font-weight:400;letter-spacing:.005em;line-height:.92;text-wrap:balance}
 h2{font-size:var(--h2)}
 h3{font-size:var(--h3);line-height:1}
@@ -190,7 +191,7 @@ body.js .v.on{display:grid;animation:stamp .42s cubic-bezier(.2,.9,.3,1.25) both
 .soldout{margin-top:auto}
 .soldout-tag{display:inline-block;font-family:var(--disp);font-size:1.15rem;letter-spacing:.06em;color:var(--muted);box-shadow:inset 0 0 0 2px #3a4247;padding:.42em .7em .32em}
 .soldout p{margin-top:.9rem;color:var(--faint);font-size:var(--small);line-height:1.5;max-width:34ch}
-.plan-kit{opacity:.82}
+.plan-kit{opacity:1}
 
 /* ---------- 6 · questions ---------- */
 .faq{padding-block:clamp(5rem,10vw,8rem);display:grid;grid-template-columns:1fr;gap:clamp(2rem,4vw,3rem)}
@@ -357,9 +358,10 @@ body.js .sheet-b.in .pen{opacity:1;transition:opacity .5s ease 1.5s}
           <li>Three companion playbooks: sales objections, public argument, difficult people</li>
           <li>Printable one-page field card</li>
         </ul>
-        <div class="soldout">
+        <button class="btn btn-ghost" type="button" data-soldout aria-controls="kit-soldout">Get the full kit</button>
+        <div class="soldout" id="kit-soldout" role="status" hidden>
           <span class="soldout-tag">Sold out</span>
-          <p>The printed kit is out of stock. Back in a few business days &mdash; the $27 edition is available now.</p>
+          <p>The printed kit just sold out. It's back in a few business days &mdash; grab the $27 edition now and you'll be reading tonight.</p>
         </div>
       </article>
       <article class="plan plan-book rise">
@@ -471,6 +473,16 @@ document.body.classList.add('js');
       if (v) { void v.offsetWidth; v.classList.add('on'); }
     });
   });
+
+  /* full kit: looks available, reveals sold-out on click */
+  var kitBtn = document.querySelector('[data-soldout]');
+  if (kitBtn) {
+    kitBtn.addEventListener('click', function(){
+      var note = document.getElementById('kit-soldout');
+      kitBtn.hidden = true;
+      if (note) { note.hidden = false; note.focus && note.setAttribute('tabindex','-1'); note.focus && note.focus(); }
+    });
+  }
 
   /* the book turns a little toward the pointer */
   var book = document.getElementById('book');
