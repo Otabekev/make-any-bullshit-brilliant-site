@@ -188,10 +188,24 @@ body.js .v.on{display:grid;animation:stamp .42s cubic-bezier(.2,.9,.3,1.25) both
 .plan-book li::before{top:.72em}
 .plan-kit li.plus{padding-left:0;color:var(--text);font-style:italic}
 .plan-kit li.plus::before{display:none}
-.soldout{margin-top:auto}
-.soldout-tag{display:inline-block;font-family:var(--disp);font-size:1.15rem;letter-spacing:.06em;color:var(--muted);box-shadow:inset 0 0 0 2px #3a4247;padding:.42em .7em .32em}
-.soldout p{margin-top:.9rem;color:var(--faint);font-size:var(--small);line-height:1.5;max-width:34ch}
 .plan-kit{opacity:1}
+.soldout-tag{display:inline-block;font-family:var(--disp);font-size:1.15rem;letter-spacing:.06em;color:var(--red);box-shadow:inset 0 0 0 2px var(--red);padding:.42em .7em .32em}
+
+/* sold-out popup */
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) max(20px,env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
+.modal-scrim{position:absolute;inset:0;background:rgba(6,8,9,.82);opacity:0;transition:opacity .25s ease}
+.modal.open .modal-scrim{opacity:1}
+.modal-box{position:relative;width:100%;max-width:440px;background:var(--bg-lift);box-shadow:inset 0 3px 0 var(--red),0 40px 80px -24px rgba(0,0,0,.8);padding:clamp(1.75rem,4vw,2.5rem);opacity:0;transform:translateY(16px) scale(.97);transition:opacity .28s cubic-bezier(.22,.61,.36,1),transform .28s cubic-bezier(.22,.61,.36,1)}
+.modal.open .modal-box{opacity:1;transform:none}
+.modal-box h3{margin-top:1.1rem;font-size:clamp(1.9rem,4vw,2.5rem);line-height:1;color:var(--text)}
+.modal-box p{margin-top:.9rem;color:var(--muted);line-height:1.5;font-size:var(--body)}
+.modal-box .btn{margin-top:1.6rem;width:100%}
+.modal-x{position:absolute;top:.6rem;right:.6rem;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border:0;color:var(--muted);font-size:1.9rem;line-height:1;cursor:pointer;border-radius:0}
+.modal-x:hover{color:var(--text)}
+.modal-x:focus-visible,.modal-later:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.modal-later{display:block;margin:1rem auto 0;background:transparent;border:0;color:var(--faint);font-family:var(--serif);font-size:var(--small);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.modal-later:hover{color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.modal-scrim,.modal-box{transition:none}}
 
 /* ---------- 6 · questions ---------- */
 .faq{padding-block:clamp(5rem,10vw,8rem);display:grid;grid-template-columns:1fr;gap:clamp(2rem,4vw,3rem)}
@@ -358,11 +372,7 @@ body.js .sheet-b.in .pen{opacity:1;transition:opacity .5s ease 1.5s}
           <li>Three companion playbooks: sales objections, public argument, difficult people</li>
           <li>Printable one-page field card</li>
         </ul>
-        <button class="btn btn-ghost" type="button" data-soldout aria-controls="kit-soldout">Get the full kit</button>
-        <div class="soldout" id="kit-soldout" role="status" hidden>
-          <span class="soldout-tag">Sold out</span>
-          <p>The printed kit just sold out. It's back in a few business days &mdash; grab the $27 edition now and you'll be reading tonight.</p>
-        </div>
+        <button class="btn btn-ghost" type="button" data-soldout aria-haspopup="dialog">Get the full kit</button>
       </article>
       <article class="plan plan-book rise">
         <p class="plan-flag">Most people start here</p>
@@ -414,6 +424,18 @@ body.js .sheet-b.in .pen{opacity:1;transition:opacity .5s ease 1.5s}
   <span>Make Any Bullshit Sound Brilliant</span>
   <span>&copy; 2026</span>
 </footer>
+
+<div class="modal" id="kit-modal" hidden>
+  <div class="modal-scrim" data-close></div>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="kit-modal-title">
+    <button class="modal-x" type="button" data-close aria-label="Close">&times;</button>
+    <span class="soldout-tag">Sold out</span>
+    <h3 id="kit-modal-title">The printed kit just sold out</h3>
+    <p>It's back in a few business days. Grab the $27 edition now &mdash; same book, on your phone tonight &mdash; and you keep $120.</p>
+    <a class="btn" href="https://argumentlab.lemonsqueezy.com/checkout/buy/11f32522-1c07-46bb-843b-d7bbe48e232b" data-checkout>Get the $27 edition <span class="arrow" aria-hidden="true">&rarr;</span></a>
+    <button class="modal-later" type="button" data-close>Maybe later</button>
+  </div>
+</div>
 
 <script src="https://app.lemonsqueezy.com/js/lemon.js" defer></script>
 <script>
@@ -474,13 +496,38 @@ document.body.classList.add('js');
     });
   });
 
-  /* full kit: looks available, reveals sold-out on click */
+  /* full kit: looks available, opens the sold-out popup on click */
   var kitBtn = document.querySelector('[data-soldout]');
-  if (kitBtn) {
-    kitBtn.addEventListener('click', function(){
-      var note = document.getElementById('kit-soldout');
-      kitBtn.hidden = true;
-      if (note) { note.hidden = false; note.focus && note.setAttribute('tabindex','-1'); note.focus && note.focus(); }
+  var modal = document.getElementById('kit-modal');
+  if (kitBtn && modal) {
+    var opener = null;
+    function openModal(){
+      opener = document.activeElement;
+      modal.hidden = false;
+      void modal.offsetWidth;
+      modal.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      var first = modal.querySelector('.btn');
+      if (first && first.focus) first.focus();
+    }
+    function closeModal(){
+      modal.classList.remove('open');
+      document.body.style.overflow = '';
+      var done = function(){ modal.hidden = true; modal.removeEventListener('transitionend', done); };
+      if (reduce) done(); else modal.addEventListener('transitionend', done);
+      if (opener && opener.focus) opener.focus();
+    }
+    kitBtn.addEventListener('click', openModal);
+    modal.addEventListener('click', function(e){ if (e.target.closest('[data-close]')) closeModal(); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+    /* keep focus inside the dialog while it's open */
+    modal.addEventListener('keydown', function(e){
+      if (e.key !== 'Tab' || modal.hidden) return;
+      var f = modal.querySelectorAll('button, a[href]');
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
   }
 
